@@ -33,6 +33,7 @@ export interface Marketplace {
   status: MpStatus;
   blocked_reason: string | null;
   published_at: number | null;
+  listing_id: string | null;
 }
 
 export interface Stock {
@@ -64,8 +65,8 @@ export interface Stock {
   updated_at: number;
 
   marketplaces: Marketplace[];
-  stock_date?: number; // §3 "Date" — when purchased/entered
-  expected_arrival_at?: number | null; // §3 "Arrival date"
+  stock_date?: number;
+  expected_arrival_at?: number | null;
   volume?: string | null;
 }
 

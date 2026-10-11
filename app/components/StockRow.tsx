@@ -5,10 +5,19 @@ import { nextAction, stage } from "../lib/stages";
 import { useStore } from "../lib/store";
 import { Stock } from "../lib/types";
 
-export default function StockRow({ stock }: { stock: Stock }) {
+export default function StockRow({
+  stock,
+  batchName,
+}: {
+  stock: Stock;
+  /** When provided, a "Batch" cell is rendered between Item and Qty. */
+  batchName?: string;
+}) {
   const openRow = useStore((s) => s.openRow);
   const act = nextAction(stock);
   const st = stage(stock);
+
+  const showBatch = batchName !== undefined;
 
   return (
     <tr
@@ -31,6 +40,13 @@ export default function StockRow({ stock }: { stock: Stock }) {
           </div>
         )}
       </td>
+
+      {showBatch && (
+        <td className="px-4 py-3 text-xs text-slate-600 dark:text-slate-300 whitespace-nowrap">
+          {batchName || "—"}
+        </td>
+      )}
+
       <td className="px-4 py-3 text-slate-600 dark:text-slate-300">
         {stock.qty}
       </td>

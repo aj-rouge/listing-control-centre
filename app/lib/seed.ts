@@ -34,7 +34,6 @@ type MpOpt = {
   status?: MpStatus;
   blocked_reason?: string;
 };
-
 export function buildMarketplaces(
   mp: Partial<
     Record<
@@ -44,6 +43,7 @@ export function buildMarketplaces(
         req?: 0 | 1;
         status?: MpStatus;
         blocked_reason?: string;
+        listing_id?: string | null;
       }
     >
   >,
@@ -68,6 +68,7 @@ export function buildMarketplaces(
         status: "not_required",
         blocked_reason: null,
         published_at: null,
+        listing_id: null,
       };
     }
     const required = (o.req ?? 1) as 0 | 1;
@@ -80,6 +81,7 @@ export function buildMarketplaces(
       blocked_reason: o.blocked_reason ?? null,
       published_at:
         status === "live" ? now - Math.max(baseAge - 3, 0) * DAY : null,
+      listing_id: o.listing_id ?? null,
     };
   });
 }

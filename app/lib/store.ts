@@ -34,6 +34,7 @@ interface State {
   stock: Stock[];
   openRowId: string | null;
   newBatchOpen: boolean;
+  newStockRowOpen: boolean;
   newStockRowForBatch: string | null;
 
   openRow: (id: string) => void;
@@ -47,7 +48,8 @@ interface State {
     notes?: string;
   }) => Batch;
 
-  openNewStockRow: (batchId: string) => void;
+  /** Open the dialog. Pass a batch id to preselect it, or `null` for picker mode. */
+  openNewStockRow: (batchId: string | null) => void;
   closeNewStockRow: () => void;
   addStock: (input: NewStockInput) => Stock;
 
@@ -75,6 +77,7 @@ export const useStore = create<State>((set) => ({
   stock: seedStock,
   openRowId: null,
   newBatchOpen: false,
+  newStockRowOpen: false,
   newStockRowForBatch: null,
 
   openRow: (id) => set({ openRowId: id }),
@@ -98,8 +101,10 @@ export const useStore = create<State>((set) => ({
     return batch;
   },
 
-  openNewStockRow: (batchId) => set({ newStockRowForBatch: batchId }),
-  closeNewStockRow: () => set({ newStockRowForBatch: null }),
+  openNewStockRow: (batchId) =>
+    set({ newStockRowOpen: true, newStockRowForBatch: batchId }),
+  closeNewStockRow: () =>
+    set({ newStockRowOpen: false, newStockRowForBatch: null }),
 
   addStock: (input) => {
     const ts = now();
@@ -212,6 +217,7 @@ export const useStore = create<State>((set) => ({
       stock: seedStock,
       openRowId: null,
       newBatchOpen: false,
+      newStockRowOpen: false,
       newStockRowForBatch: null,
     }),
 }));

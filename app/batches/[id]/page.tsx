@@ -54,7 +54,7 @@ export default function BatchDetailPage() {
                      transition-colors"
         >
           <Plus className="w-4 h-4" />
-          Add Row
+          Add Product
         </button>
       </div>
 

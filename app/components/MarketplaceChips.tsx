@@ -28,8 +28,12 @@ export default function MarketplaceChips({ stock }: { stock: Stock }) {
     return (
       <span className="text-xs text-slate-400 dark:text-slate-500">—</span>
     );
+
+  const liveCount = req.filter((m) => m.status === "live").length;
+  const leftCount = req.length - liveCount;
+
   return (
-    <div className="flex flex-wrap gap-1">
+    <div className="flex flex-wrap items-center gap-1">
       {req.map((m) => {
         const p = PLATFORMS.find((x) => x.key === m.platform)!;
         const cls = CHIP[m.status as keyof typeof CHIP] ?? CHIP.not_required;
@@ -37,12 +41,23 @@ export default function MarketplaceChips({ stock }: { stock: Stock }) {
         return (
           <span
             key={m.platform}
+            title={m.listing_id ? `ID: ${m.listing_id}` : p.label}
             className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[11px] font-semibold ${cls}`}
           >
             {mark} {p.label}
           </span>
         );
       })}
+      <span
+        className={`inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-semibold ${
+          leftCount === 0
+            ? "bg-green-50 text-green-700 dark:bg-green-950/40 dark:text-green-400"
+            : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300"
+        }`}
+        title={`${liveCount} of ${req.length} live · ${leftCount} left`}
+      >
+        {leftCount === 0 ? "all live" : `${leftCount} left`}
+      </span>
     </div>
   );
 }

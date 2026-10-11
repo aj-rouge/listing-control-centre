@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import StagePill from "./StagePill";
 import MarketplaceGrid from "./MarketplaceGrid";
 import { useStore } from "../lib/store";
@@ -41,6 +42,9 @@ export default function RowDetail() {
   const blockRow = useStore((s) => s.blockRow);
   const unblockRow = useStore((s) => s.unblockRow);
 
+  const [isBlocking, setIsBlocking] = useState(false);
+  const [blockReason, setBlockReason] = useState("");
+
   const stock = useStore((s) => s.stock.find((x) => x.id === openRowId));
   const batch = useStore((s) =>
     s.batches.find((b) => b.id === stock?.batch_id),
@@ -57,6 +61,18 @@ export default function RowDetail() {
     if (act.key === "markChecked") markChecked(stock.id);
     if (act.key === "markListed") markListed(stock.id);
     if (act.key === "markDone") markDone(stock.id);
+  };
+
+  const cancelBlock = () => {
+    setIsBlocking(false);
+    setBlockReason("");
+  };
+
+  const submitBlock = () => {
+    const reason = blockReason.trim();
+    if (!reason) return;
+    blockRow(stock.id, reason);
+    cancelBlock();
   };
 
   return (
@@ -163,16 +179,56 @@ export default function RowDetail() {
                 Unblock
               </button>
             </div>
+          ) : isBlocking ? (
+            <div className="rounded-lg border border-red-200 dark:border-red-900 bg-red-50 dark:bg-red-950/40 p-3 space-y-2">
+              <label className="block text-xs font-medium text-red-800 dark:text-red-300">
+                Why is this blocked?
+              </label>
+              <input
+                autoFocus
+                value={blockReason}
+                onChange={(e) => setBlockReason(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") submitBlock();
+                  if (e.key === "Escape") cancelBlock();
+                }}
+                placeholder="e.g. waiting for photos, Amazon approval, stock not arrived"
+                className="w-full rounded-md border border-red-200 dark:border-red-900 bg-white dark:bg-slate-900 px-3 py-2 text-sm text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-red-500/40"
+              />
+              <div className="flex gap-2">
+                <button
+                  onClick={submitBlock}
+                  disabled={!blockReason.trim()}
+                  className="flex-1 rounded-md bg-red-600 px-3 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  Block
+                </button>
+                <button
+                  onClick={cancelBlock}
+                  className="rounded-md border border-red-200 dark:border-red-900 px-3 py-2 text-sm font-medium text-red-700 dark:text-red-300 hover:bg-red-100 dark:hover:bg-red-950/60 transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
           ) : (
             <button
-              onClick={() => {
-                const reason = prompt(
-                  "Blocked reason? (e.g. waiting for photos, Amazon approval, stock not arrived)",
-                );
-                if (reason) blockRow(stock.id, reason);
-              }}
-              className="text-xs text-slate-500 dark:text-slate-400 hover:text-red-600 dark:hover:text-red-400 transition-colors"
+              onClick={() => setIsBlocking(true)}
+              className="w-full flex items-center justify-center gap-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2.5 text-sm font-medium text-slate-700 dark:text-slate-200 hover:border-red-300 hover:bg-red-50 hover:text-red-700 dark:hover:border-red-900 dark:hover:bg-red-950/40 dark:hover:text-red-400 transition-colors"
             >
+              <svg
+                className="w-4 h-4"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
+                <circle cx="12" cy="12" r="10" />
+                <path d="m4.9 4.9 14.2 14.2" />
+              </svg>
               Mark as blocked…
             </button>
           )}
