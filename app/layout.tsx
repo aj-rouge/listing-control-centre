@@ -20,8 +20,8 @@ const geistMono = localFont({
 });
 
 export const metadata = {
-  title: "HTML Description Generator",
-  description: "Generated eBay HTML Descriptions for your listings in seconds.",
+  title: "Listing Control Centre",
+  description: "A simple tool to manage your product listings and stock.",
 };
 
 export default function RootLayout({
