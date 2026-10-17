@@ -409,8 +409,10 @@ function Dropdown({
       }
     };
 
-    const onScrollOrResize = () => closeMenu();
-
+    const onScrollOrResize = (e: Event) => {
+      if (popoverRef.current?.contains(e.target as Node)) return;
+      closeMenu();
+    };
     document.addEventListener("mousedown", onPointer);
     document.addEventListener("keydown", onKey);
     window.addEventListener("scroll", onScrollOrResize, true);
