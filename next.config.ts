@@ -1,9 +1,15 @@
-import type { NextConfig } from "next";
+// next.config.js
 
-const nextConfig: NextConfig = {
-  /* config options here */
+import { initOpenNextCloudflareForDev } from "@opennextjs/cloudflare";
+
+// This hooks into next dev to provision your bindings locally
+initOpenNextCloudflareForDev();
+const nextConfig = {
+  experimental: {
+    serverActions: {
+      allowedOrigins: ["127.0.0.1:8787", "localhost:8787"],
+    },
+  },
 };
 
 export default nextConfig;
-
-import('@opennextjs/cloudflare').then(m => m.initOpenNextCloudflareForDev());

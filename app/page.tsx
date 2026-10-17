@@ -1,28 +1,12 @@
-"use client";
-import { Suspense, useEffect, useState } from "react";
-import DashboardContent from "./components/DashboardContent";
-import DashboardSkeleton from "./components/DashboardSkeleton";
+import { getDb } from "./lib/db/client";
+import { getBatches, getStockWithMarketplaces } from "./lib/db/queries";
+import DashboardHydrator from "./DashboardHydrator";
 
-// ← set to 0 to disable the demo delay
-const SKELETON_DELAY_MS = 0;
-
-export default function DashboardPage() {
-  return (
-    <Suspense fallback={<DashboardSkeleton />}>
-      <DelayedDashboard />
-    </Suspense>
-  );
-}
-
-function DelayedDashboard() {
-  const [ready, setReady] = useState(SKELETON_DELAY_MS <= 0);
-
-  useEffect(() => {
-    if (ready) return;
-    const t = setTimeout(() => setReady(true), SKELETON_DELAY_MS);
-    return () => clearTimeout(t);
-  }, [ready]);
-
-  if (!ready) return <DashboardSkeleton />;
-  return <DashboardContent />;
+export default async function Page() {
+  const db = await getDb();
+  const [batches, stock] = await Promise.all([
+    getBatches(db),
+    getStockWithMarketplaces(db),
+  ]);
+  return <DashboardHydrator batches={batches} stock={stock} />;
 }

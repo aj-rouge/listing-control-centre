@@ -4,7 +4,7 @@ import StockRow from "./StockRow";
 import EmptyState from "./EmptyState";
 import { useStore } from "../lib/store";
 import { PLATFORMS } from "../lib/constants";
-import { PlatformKey, Stock } from "../lib/types";
+import { PlatformKey, Priority, Stock } from "../lib/types";
 import { stage } from "../lib/stages";
 
 const DAY = 86_400_000;
@@ -19,6 +19,7 @@ type SortKey =
   | "price-asc";
 
 type StageFilter = "all" | "remaining" | "in_progress" | "live" | "blocked";
+type PriorityFilter = "all" | Priority;
 
 const AGE_OPTIONS: { key: AgeFilter; label: string; days: number | null }[] = [
   { key: "any", label: "Any age", days: null },
@@ -37,6 +38,7 @@ export default function ProductsView() {
   const [platform, setPlatform] = useState<PlatformKey | "all">("all");
   const [platformRemainingOnly, setPlatformRemainingOnly] = useState(false);
   const [stageFilter, setStageFilter] = useState<StageFilter>("all");
+  const [priorityFilter, setPriorityFilter] = useState<PriorityFilter>("all");
   const [minPrice, setMinPrice] = useState("");
   const [maxPrice, setMaxPrice] = useState("");
   const [minQty, setMinQty] = useState("");
@@ -101,6 +103,11 @@ export default function ProductsView() {
         }
       }
 
+      // Priority
+      if (priorityFilter !== "all" && s.priority !== priorityFilter) {
+        return false;
+      }
+
       // Price range (any required marketplace price falls inside the range)
       if (minP !== null || maxP !== null) {
         const prices = s.marketplaces
@@ -149,6 +156,7 @@ export default function ProductsView() {
     platform,
     platformRemainingOnly,
     stageFilter,
+    priorityFilter, // Added dependency
     minPrice,
     maxPrice,
     minQty,
@@ -162,6 +170,7 @@ export default function ProductsView() {
     setPlatform("all");
     setPlatformRemainingOnly(false);
     setStageFilter("all");
+    setPriorityFilter("all");
     setMinPrice("");
     setMaxPrice("");
     setMinQty("");
@@ -174,6 +183,7 @@ export default function ProductsView() {
     platform !== "all" ||
     platformRemainingOnly ||
     stageFilter !== "all" ||
+    priorityFilter !== "all" ||
     minPrice.trim() !== "" ||
     maxPrice.trim() !== "" ||
     minQty.trim() !== "" ||
@@ -308,6 +318,23 @@ export default function ProductsView() {
                   {o.label}
                 </option>
               ))}
+            </select>
+          </div>
+
+          <div className="w-44">
+            <select
+              value={priorityFilter}
+              onChange={(e) =>
+                setPriorityFilter(e.target.value as PriorityFilter)
+              }
+              className="w-full text-sm border border-slate-200 dark:border-slate-700 rounded-lg px-2 py-1.5
+                         bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100
+                         focus:outline-none focus:border-slate-900 dark:focus:border-slate-400"
+            >
+              <option value="all">Any priority</option>
+              <option value="urgent">Urgent only</option>
+              <option value="normal">Normal only</option>
+              <option value="low">Low only</option>
             </select>
           </div>
 

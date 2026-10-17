@@ -25,8 +25,20 @@ export default function StockRow({
       className="cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
     >
       <td className="px-4 py-3">
-        <div className="font-medium text-slate-900 dark:text-slate-100">
-          {stock.item}
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="font-medium text-slate-900 dark:text-slate-100">
+            {stock.item}
+          </span>
+          {stock.priority === "urgent" && (
+            <span className="text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-red-100 text-red-700 dark:bg-red-950/40 dark:text-red-400">
+              Urgent
+            </span>
+          )}
+          {stock.priority === "low" && (
+            <span className="text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400">
+              Low
+            </span>
+          )}
         </div>
         {stock.pf_number && (
           <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">

@@ -5,6 +5,7 @@ import RowDetail from "./components/RowDetail";
 import TopBar from "./components/TopBar";
 import "./globals.css";
 import localFont from "next/font/local";
+import Script from "next/script"; // 1. Import Next.js Script
 
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
@@ -22,6 +23,7 @@ export const metadata = {
   title: "HTML Description Generator",
   description: "Generated eBay HTML Descriptions for your listings in seconds.",
 };
+
 export default function RootLayout({
   children,
 }: {
@@ -30,7 +32,10 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
-        <script
+        {/* 2. Use Next.js <Script> with beforeInteractive */}
+        <Script
+          id="theme-init"
+          strategy="beforeInteractive"
           dangerouslySetInnerHTML={{
             __html: `
               (function() {
