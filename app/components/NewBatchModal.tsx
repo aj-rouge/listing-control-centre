@@ -137,7 +137,7 @@ export default function NewBatchModal() {
               className="w-full text-sm border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2
                          bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100
                          focus:outline-none focus:border-slate-900 dark:focus:border-slate-400
-                         [color-scheme:light] dark:[color-scheme:dark]"
+                         scheme-light dark:sheme-dark"
             />
           </div>
 
