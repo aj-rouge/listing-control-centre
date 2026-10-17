@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import { getDb } from "./lib/db/client";
 import { getBatches, getStockWithMarketplaces } from "./lib/db/queries";
 import DashboardHydrator from "./DashboardHydrator";
