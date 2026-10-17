@@ -9,6 +9,7 @@ interface Props {
   productCount: number;
   onNewBatch: () => void;
   onNewProduct: () => void;
+  onImport: () => void; // ← new
 }
 
 export default function DashboardTabs({
@@ -17,6 +18,7 @@ export default function DashboardTabs({
   productCount,
   onNewBatch,
   onNewProduct,
+  onImport, // ← new
 }: Props) {
   const router = useRouter();
   const pathname = usePathname();
@@ -24,7 +26,6 @@ export default function DashboardTabs({
 
   const setTab = (next: DashboardTab) => {
     const params = new URLSearchParams(searchParams.toString());
-    // "products" is the default — keep the URL clean.
     if (next === "products") {
       params.delete("tab");
     } else {
@@ -49,24 +50,36 @@ export default function DashboardTabs({
         count={batchCount}
       />
 
-      {activeTab === "batches" && (
+      <div className="ml-auto mb-2 flex items-center gap-2">
+        {/* ← new: secondary "outline" style so it doesn't compete with the primary CTA */}
         <button
-          onClick={onNewBatch}
-          className="ml-auto mb-2 text-sm font-medium bg-slate-900 text-white px-3 py-1.5 rounded-lg hover:bg-slate-800
-                     dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white transition-colors"
+          onClick={onImport}
+          className="text-sm font-medium border border-slate-300 text-slate-700 px-3 py-1.5 rounded-lg
+                     hover:bg-slate-50 transition-colors
+                     dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
         >
-          + New Batch
+          ↑ Import CSV
         </button>
-      )}
-      {activeTab === "products" && (
-        <button
-          onClick={onNewProduct}
-          className="ml-auto mb-2 text-sm font-medium bg-slate-900 text-white px-3 py-1.5 rounded-lg hover:bg-slate-800
-                     dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white transition-colors"
-        >
-          + New Product
-        </button>
-      )}
+
+        {activeTab === "batches" && (
+          <button
+            onClick={onNewBatch}
+            className="text-sm font-medium bg-slate-900 text-white px-3 py-1.5 rounded-lg hover:bg-slate-800
+                       dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white transition-colors"
+          >
+            + New Batch
+          </button>
+        )}
+        {activeTab === "products" && (
+          <button
+            onClick={onNewProduct}
+            className="text-sm font-medium bg-slate-900 text-white px-3 py-1.5 rounded-lg hover:bg-slate-800
+                       dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white transition-colors"
+          >
+            + New Product
+          </button>
+        )}
+      </div>
     </div>
   );
 }
