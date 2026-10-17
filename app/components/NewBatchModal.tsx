@@ -51,20 +51,26 @@ export default function NewBatchModal() {
 
   if (!open) return null;
 
-  const submit = (e: React.FormEvent) => {
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     const trimmed = name.trim();
     if (!trimmed) {
       setError("Batch name is required.");
       return;
     }
-    const batch = addBatch({
-      name: trimmed,
-      batch_date: isoToTs(date),
-      notes: notes.trim(),
-    });
-    closeNewBatch();
-    router.push(`/batches/${batch.id}`);
+
+    try {
+      const batch = await addBatch({
+        name: trimmed,
+        batch_date: isoToTs(date),
+        notes: notes.trim(),
+      });
+      closeNewBatch();
+      router.push(`/batches/${batch.id}`);
+    } catch (err) {
+      console.error("[NewBatchModal] create failed", err);
+      setError("Could not create batch. Please try again.");
+    }
   };
 
   return (
