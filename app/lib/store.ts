@@ -14,6 +14,7 @@ import {
   actionMarkChecked,
   actionMarkDone,
   actionMarkListed,
+  actionRevertTimestamp,
   actionSetMarketplace,
   actionUnblockRow,
   actionUpdateStockDetails,
@@ -80,6 +81,10 @@ interface State {
   updateStockDetails: (id: string, patch: Partial<Stock>) => Promise<void>;
   deleteStock: (id: string) => Promise<void>;
   deleteBatch: (id: string) => Promise<void>;
+  revertTimestamp: (
+    id: string,
+    field: "arrived_at" | "checked_at" | "listed_at" | "completed_at",
+  ) => Promise<void>;
 }
 
 const now = () => Date.now();
@@ -279,6 +284,16 @@ export const useStore = create<State>((set) => ({
     } catch (err) {
       console.error("[deleteBatch] persist failed", err);
     }
+  },
+  revertTimestamp: async (id, field) => {
+    const ts = now();
+    set((s) => ({
+      // ← optimistic; fires immediately
+      stock: s.stock.map((x) =>
+        x.id === id ? { ...x, [field]: null, updated_at: ts } : x,
+      ),
+    }));
+    await actionRevertTimestamp(id, field); // ← persists
   },
   reset: () =>
     set({

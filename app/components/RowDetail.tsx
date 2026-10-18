@@ -7,6 +7,7 @@ import { useStore } from "../lib/store";
 import { nextAction, stage, stageIndex } from "../lib/stages";
 import { PLATFORMS, STAGE_LABEL, STAGES } from "../lib/constants";
 import type { Priority, Stock } from "../lib/types";
+type RevertField = "arrived_at" | "checked_at" | "listed_at" | "completed_at";
 
 function Field({ label, value }: { label: string; value: React.ReactNode }) {
   return (
@@ -18,13 +19,31 @@ function Field({ label, value }: { label: string; value: React.ReactNode }) {
     </div>
   );
 }
-
-function HistoryEntry({ ts, label }: { ts: number; label: string }) {
+function HistoryEntry({
+  ts,
+  label,
+  onRevert,
+}: {
+  ts: number;
+  label: string;
+  onRevert?: () => void;
+}) {
   return (
     <div className="flex items-start gap-2">
       <div className="w-1.5 h-1.5 rounded-full bg-slate-300 dark:bg-slate-600 mt-1.5" />
-      <div className="flex-1">
-        <div className="text-slate-900 dark:text-slate-50">{label}</div>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center justify-between gap-2">
+          <div className="text-slate-900 dark:text-slate-50">{label}</div>
+          {onRevert && (
+            <button
+              onClick={onRevert}
+              className="text-[11px] text-slate-400 dark:text-slate-500 hover:text-red-600 dark:hover:text-red-400 transition-colors shrink-0"
+              title="Undo this step and everything after it"
+            >
+              ↺ Undo
+            </button>
+          )}
+        </div>
         <div className="text-xs text-slate-400 dark:text-slate-500">
           {new Date(ts).toLocaleString("en-GB")}
         </div>
@@ -44,6 +63,7 @@ export default function RowDetail() {
   const unblockRow = useStore((s) => s.unblockRow);
   const updateStockDetails = useStore((s) => s.updateStockDetails);
   const deleteStock = useStore((s) => s.deleteStock);
+  const revertTimestamp = useStore((s) => s.revertTimestamp);
 
   const [isBlocking, setIsBlocking] = useState(false);
   const [blockReason, setBlockReason] = useState("");
@@ -114,6 +134,12 @@ export default function RowDetail() {
       )
     ) {
       deleteStock(stock.id);
+    }
+  };
+
+  const confirmRevert = (field: RevertField, label: string) => {
+    if (window.confirm(`Undo "${label}"?`)) {
+      revertTimestamp(stock.id, field);
     }
   };
   return (
@@ -511,18 +537,27 @@ export default function RowDetail() {
                     <HistoryEntry
                       ts={stock.arrived_at}
                       label="Marked arrived"
+                      onRevert={() =>
+                        confirmRevert("arrived_at", "Marked arrived")
+                      }
                     />
                   )}
                   {stock.checked_at && (
                     <HistoryEntry
                       ts={stock.checked_at}
                       label="Marked checked / counted"
+                      onRevert={() =>
+                        confirmRevert("checked_at", "Marked checked")
+                      }
                     />
                   )}
                   {stock.listed_at && (
                     <HistoryEntry
                       ts={stock.listed_at}
                       label="BaseLinker product created"
+                      onRevert={() =>
+                        confirmRevert("listed_at", "BaseLinker product created")
+                      }
                     />
                   )}
                   {stock.marketplaces
@@ -538,6 +573,9 @@ export default function RowDetail() {
                     <HistoryEntry
                       ts={stock.completed_at}
                       label="Fully complete — all required marketplaces live"
+                      onRevert={() =>
+                        confirmRevert("completed_at", "Fully complete")
+                      }
                     />
                   )}
                 </div>

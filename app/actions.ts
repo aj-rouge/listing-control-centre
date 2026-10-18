@@ -7,6 +7,7 @@ import {
   insertBatch,
   insertStock,
   markStockTimestamp,
+  revertStockTimestamp,
   unblockStock,
   updateMarketplace,
   updateStockDetails,
@@ -14,6 +15,7 @@ import {
 import { buildMarketplaces } from "./lib/seed";
 import type { Batch, Marketplace, PlatformKey, Stock } from "./lib/types";
 import { getDb } from "./lib/db/client";
+import type { RevertibleTimestampField } from "./lib/db/mutations";
 
 export async function actionCreateBatch(input: {
   name: string;
@@ -131,4 +133,11 @@ export async function actionDeleteStock(id: string) {
 
 export async function actionDeleteBatch(id: string) {
   await deleteBatch(await getDb(), id);
+}
+
+export async function actionRevertTimestamp(
+  id: string,
+  field: RevertibleTimestampField,
+) {
+  await revertStockTimestamp(await getDb(), id, field, Date.now());
 }

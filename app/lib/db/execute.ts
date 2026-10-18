@@ -164,9 +164,17 @@ export const executeBatch = async (
     }
 
     // Prepare all statements
-    const statements = queries.map(({ sql, params }) =>
-      dbInstance.prepare(sql).bind(...params),
-    );
+    // lib/db/execute.ts
+    const statements = queries.map(({ sql, params }, qi) => {
+      params.forEach((p, pi) => {
+        if (p === undefined) {
+          throw new Error(
+            `[executeBatch] query ${qi} param ${pi} is undefined — use null.\n${sql}`,
+          );
+        }
+      });
+      return dbInstance.prepare(sql).bind(...params);
+    });
 
     if (isDev()) {
       console.log("[executeBatch] Executing batch via db.batch()...");

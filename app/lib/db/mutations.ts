@@ -282,3 +282,27 @@ export async function deleteBatch(db: D1Database, id: string): Promise<void> {
     db,
   );
 }
+export type RevertibleTimestampField =
+  | "arrived_at"
+  | "checked_at"
+  | "listed_at"
+  | "completed_at";
+
+export async function revertStockTimestamp(
+  db: D1Database,
+  id: string,
+  field: RevertibleTimestampField,
+  ts: number,
+): Promise<void> {
+  // Single, independent flag. No cascade — `arrived_at` is not a
+  // precondition for checked/listed/completed (see nextAction()).
+  await executeBatch(
+    [
+      {
+        sql: `UPDATE stock SET ${field} = NULL, updated_at = ? WHERE id = ?`,
+        params: [ts, id],
+      },
+    ],
+    db,
+  );
+}

@@ -12,21 +12,21 @@ const DAY = 86_400_000;
 export default function DashboardStats() {
   const stock = useStore((s) => s.stock);
 
-  // Incoming stock = replenishments still open. Count both rows and units.
-  const incomingRows = stock.filter(isReplenishmentRemaining);
+  // Incoming = not yet arrived, regardless of whether it's a replenishment
+  const incomingRows = stock.filter((s) => !s.completed_at && !s.arrived_at);
   const incomingUnits = incomingRows.reduce((sum, s) => sum + s.qty, 0);
 
   const listingsRemaining = stock.filter(isListingRemaining).length;
   const totalListings = stock.length;
 
   // Total required marketplaces that aren't live yet, on items not completed.
-  const platformsLeft = stock.reduce((sum, s) => {
-    if (s.completed_at) return sum;
-    return (
-      sum +
-      s.marketplaces.filter((m) => m.required && m.status !== "live").length
-    );
-  }, 0);
+  const platformsLeft = new Set(
+    stock
+      .filter((s) => !s.completed_at)
+      .flatMap((s) => s.marketplaces)
+      .filter((m) => m.required && m.status !== "live")
+      .map((m) => m.platform),
+  ).size;
 
   const blocked = stock.filter((s) => s.blocked).length;
   const done30d = stock.filter(
