@@ -25,17 +25,20 @@ export default function StockRow({
       className="cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
     >
       <td className="px-4 py-3">
-        <div className="flex items-center gap-2 flex-wrap">
-          <span className="font-medium text-slate-900 dark:text-slate-100">
+        <div className="flex items-center gap-2 max-w-80">
+          <span
+            title={stock.item}
+            className="truncate min-w-0 font-medium text-slate-900 dark:text-slate-100"
+          >
             {stock.item}
           </span>
           {stock.priority === "urgent" && (
-            <span className="text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-red-100 text-red-700 dark:bg-red-950/40 dark:text-red-400">
+            <span className="shrink-0 text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-red-100 text-red-700 dark:bg-red-950/40 dark:text-red-400">
               Urgent
             </span>
           )}
           {stock.priority === "low" && (
-            <span className="text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400">
+            <span className="shrink-0 text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400">
               Low
             </span>
           )}
@@ -47,7 +50,10 @@ export default function StockRow({
           </div>
         )}
         {stock.notes && (
-          <div className="text-xs text-slate-400 dark:text-slate-500 truncate max-w-xs mt-0.5">
+          <div
+            title={stock.notes}
+            className="truncate max-w-70 mt-0.5 text-xs text-slate-400 dark:text-slate-500"
+          >
             {stock.notes}
           </div>
         )}
