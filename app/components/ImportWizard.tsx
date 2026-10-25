@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { parseCsv, readCsvFile } from "../lib/import/csv";
@@ -14,6 +14,7 @@ import {
 import type { ImportRow } from "../lib/import/types";
 import type { PlatformKey } from "../lib/types";
 import { importStockChunk } from "../actions/import";
+import { AlertCircle, ChevronDown } from "lucide-react";
 
 type Step = "upload" | "map" | "preview" | "importing" | "done";
 const CHUNK_SIZE = 25;
@@ -44,7 +45,6 @@ const TARGETS: {
   { key: "pf_number", label: "PF number" },
   { key: "identifier_1", label: "Identifier 1 (IMEI)" },
   { key: "identifier_2", label: "Identifier 2" },
-  { key: "price", label: "Price (eBay fallback)" },
 ];
 
 const PLATFORM_LABELS: Record<PlatformKey, string> = {
@@ -638,26 +638,7 @@ function MapStep({
             </p>
           </div>
         ))}
-        <div className="md:col-span-2">
-          <label className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300">
-            Item — combine with{" "}
-            <span className="text-xs font-normal text-slate-500 dark:text-slate-400">
-              (optional)
-            </span>
-          </label>
-          <Dropdown
-            value={mapping.itemSecondary}
-            onChange={(v) => set("itemSecondary", v)}
-            options={combineOptions}
-          />
-          <p className="mt-1 min-h-4 truncate text-xs text-slate-400 dark:text-slate-500">
-            {previewFor(mapping.itemSecondary, sampleRows)}
-          </p>
-          <p className="mt-1.5 text-xs text-slate-500 dark:text-slate-400">
-            e.g. pick &quot;Model&quot; above and &quot;Make&quot; here →
-            &quot;Apple iPhone 16 Pro 256GB Gold&quot;
-          </p>
-        </div>{" "}
+
         <div className="mt-2 border-t border-slate-200 pt-4 md:col-span-2 dark:border-slate-800">
           <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
             <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-200">
@@ -720,7 +701,105 @@ const CELL_INPUT_CLASS =
   "focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/40 " +
   "dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100 " +
   "dark:placeholder:text-slate-500 dark:hover:border-slate-700";
+const MAX_PROBLEM_PILLS = 200;
 
+function ProblemsDropdown({ errors }: { errors: Record<number, string> }) {
+  const [open, setOpen] = useState(false);
+  const rootRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const onPointer = (e: MouseEvent) => {
+      if (rootRef.current?.contains(e.target as Node)) return;
+      setOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("mousedown", onPointer);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onPointer);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
+
+  // One pill per skipped row, sorted by source line so it reads
+  // top-to-bottom like the file.
+  const problems = useMemo(
+    () =>
+      Object.entries(errors)
+        .map(([idx, message]) => ({ srcIdx: Number(idx), message }))
+        .sort((a, b) => a.srcIdx - b.srcIdx),
+    [errors],
+  );
+  const count = problems.length;
+  const visible = problems.slice(0, MAX_PROBLEM_PILLS);
+  const hidden = count - visible.length;
+
+  return (
+    <div ref={rootRef} className="relative mb-4">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-haspopup="true"
+        aria-expanded={open}
+        className="inline-flex items-center gap-1.5 rounded-lg border border-red-200
+                   bg-red-50 px-3 py-1.5 text-sm font-medium text-red-700
+                   transition-colors hover:bg-red-100
+                   focus:outline-none focus:ring-2 focus:ring-red-500/40
+                   dark:border-red-900/50 dark:bg-red-950/40 dark:text-red-300
+                   dark:hover:bg-red-950/60"
+      >
+        <AlertCircle className="h-4 w-4 shrink-0" aria-hidden="true" />
+        <span>
+          {count} source row{count !== 1 && "s"} skipped
+        </span>
+        <span className="font-normal text-red-600/80 dark:text-red-400/80">
+          · view problems
+        </span>
+        <ChevronDown
+          aria-hidden="true"
+          className={`h-4 w-4 shrink-0 transition-transform duration-150 ${
+            open ? "rotate-180" : ""
+          }`}
+        />
+      </button>
+
+      {open && (
+        <div
+          role="dialog"
+          aria-label="Skipped rows"
+          className="absolute left-0 top-full z-100 mt-1.5 w-[min(42rem,92vw)]
+                     max-h-[60vh] overflow-y-auto rounded-lg border border-slate-200
+                     bg-white p-3 shadow-xl dark:border-slate-800 dark:bg-slate-900"
+        >
+          <div className="flex flex-wrap gap-1.5">
+            {visible.map((p: { srcIdx: number; message: string }) => (
+              <span
+                key={p.srcIdx}
+                title={`CSV line ${p.srcIdx + 2}: ${p.message}`}
+                className="inline-flex max-w-full items-center gap-1.5 rounded-full
+                           bg-red-50 py-1 pl-1 pr-2.5 text-xs text-red-700
+                           dark:bg-red-950/40 dark:text-red-300"
+              >
+                <span className="shrink-0 rounded-full bg-red-200 px-1.5 py-0.5 text-[10px] font-semibold text-red-800 dark:bg-red-900 dark:text-red-200">
+                  Line {p.srcIdx + 2}
+                </span>
+                <span className="min-w-0 truncate">{p.message}</span>
+              </span>
+            ))}
+            {hidden > 0 && (
+              <span className="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-1 text-xs text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                +{hidden} more
+              </span>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 function PreviewStep({
   rows,
   errors,
@@ -775,23 +854,7 @@ function PreviewStep({
         </span>
       </div>
 
-      {errorCount > 0 && (
-        <details className="mb-4 text-sm">
-          <summary className="cursor-pointer text-red-600 dark:text-red-400">
-            {errorCount} source row{errorCount !== 1 && "s"} skipped — click to
-            see why
-          </summary>
-          <ul className="mt-2 space-y-1 text-slate-700 dark:text-slate-300">
-            {Object.entries(errors)
-              .slice(0, 100)
-              .map(([idx, msg]) => (
-                <li key={idx}>
-                  CSV line {Number(idx) + 2}: {msg}
-                </li>
-              ))}
-          </ul>
-        </details>
-      )}
+      {errorCount > 0 && <ProblemsDropdown errors={errors} />}
 
       <div className="max-h-[60vh] overflow-auto rounded-lg border border-slate-200 dark:border-slate-800">
         <table className="w-full text-sm">
