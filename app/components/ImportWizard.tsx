@@ -470,7 +470,7 @@ function Dropdown({
           fill="none"
           stroke="currentColor"
           strokeWidth="1.5"
-          className={`h-4 w-4 flex-shrink-0 text-slate-400 transition-transform duration-150 dark:text-slate-500 ${
+          className={`h-4 w-4 shrink-0 text-slate-400 transition-transform duration-150 dark:text-slate-500 ${
             open ? "rotate-180" : ""
           }`}
         >
@@ -485,7 +485,7 @@ function Dropdown({
           <div
             ref={popoverRef}
             role="listbox"
-            className="fixed z-[100] max-h-72 overflow-y-auto rounded-lg
+            className="fixed z-100 max-h-72 overflow-y-auto rounded-lg
                        border border-slate-200 bg-white p-1 shadow-xl
                        dark:border-slate-800 dark:bg-slate-900"
             style={{ top: pos.top, left: pos.left, width: pos.width }}
@@ -517,7 +517,7 @@ function Dropdown({
                     <svg
                       viewBox="0 0 20 20"
                       fill="currentColor"
-                      className="h-4 w-4 flex-shrink-0 text-blue-600 dark:text-blue-400"
+                      className="h-4 w-4 shrink-0 text-blue-600 dark:text-blue-400"
                     >
                       <path
                         fillRule="evenodd"
@@ -606,7 +606,7 @@ function MapStep({
               onChange={(v) => set(t.key, v)}
               options={columnOptions}
             />
-            <p className="mt-1 min-h-[1rem] truncate text-xs text-slate-400 dark:text-slate-500">
+            <p className="mt-1 min-h-4 truncate text-xs text-slate-400 dark:text-slate-500">
               {previewFor(mapping[t.key], sampleRows)}
             </p>
           </div>
@@ -624,7 +624,7 @@ function MapStep({
             onChange={(v) => set("itemSecondary", v)}
             options={combineOptions}
           />
-          <p className="mt-1 min-h-[1rem] truncate text-xs text-slate-400 dark:text-slate-500">
+          <p className="mt-1 min-h-4 truncate text-xs text-slate-400 dark:text-slate-500">
             {previewFor(mapping.itemSecondary, sampleRows)}
           </p>
           <p className="mt-1.5 text-xs text-slate-500 dark:text-slate-400">
