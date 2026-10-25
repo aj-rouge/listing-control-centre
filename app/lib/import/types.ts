@@ -1,3 +1,5 @@
+import type { PlatformKey } from "../types";
+
 export interface ImportRow {
   item: string;
   qty: number;
@@ -9,4 +11,9 @@ export interface ImportRow {
   identifier_1?: string;
   identifier_2?: string;
   price?: number | null;
+  /**
+   * Per-platform prices. Present only when platform columns were mapped.
+   * A platform key that is missing or `null` means "not required for this row".
+   */
+  platformPrices?: Partial<Record<PlatformKey, number | null>>;
 }

@@ -1,5 +1,6 @@
 "use client";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import StockRow from "./StockRow";
 import EmptyState from "./EmptyState";
 import { useStore } from "../lib/store";
@@ -8,6 +9,8 @@ import { PlatformKey, Priority, Stock } from "../lib/types";
 import { stage } from "../lib/stages";
 
 const DAY = 86_400_000;
+const PAGE_SIZES = [25, 50, 100] as const;
+const DEFAULT_PAGE_SIZE = 50;
 
 type SortKey =
   | "newest"
@@ -33,7 +36,7 @@ export default function ProductsView() {
   const stock = useStore((s) => s.stock);
   const batches = useStore((s) => s.batches);
 
-  // Filters
+  // ── Filters (unchanged) ────────────────────────────────────────
   const [search, setSearch] = useState("");
   const [platform, setPlatform] = useState<PlatformKey | "all">("all");
   const [platformRemainingOnly, setPlatformRemainingOnly] = useState(false);
@@ -46,7 +49,10 @@ export default function ProductsView() {
   const [age, setAge] = useState<AgeFilter>("any");
   const [sort, setSort] = useState<SortKey>("newest");
 
-  // Batch name lookup for the table column
+  // ── Pagination ─────────────────────────────────────────────────
+  const [page, setPage] = useState(0);
+  const [pageSize, setPageSize] = useState<number>(DEFAULT_PAGE_SIZE);
+
   const batchNameById = useMemo(() => {
     const m = new Map<string, string>();
     for (const b of batches) m.set(b.id, b.name);
@@ -66,7 +72,6 @@ export default function ProductsView() {
     const ageCutoff = ageDays ? Date.now() - ageDays * DAY : null;
 
     let rows = stock.filter((s) => {
-      // Text search
       if (q) {
         const hay = [
           s.item,
@@ -80,15 +85,11 @@ export default function ProductsView() {
           .toLowerCase();
         if (!hay.includes(q)) return false;
       }
-
-      // Platform
       if (platform !== "all") {
         const m = s.marketplaces.find((x) => x.platform === platform);
         if (!m || m.required !== 1) return false;
         if (platformRemainingOnly && m.status === "live") return false;
       }
-
-      // Stage
       if (stageFilter !== "all") {
         const st = stage(s);
         if (stageFilter === "remaining") {
@@ -102,13 +103,9 @@ export default function ProductsView() {
           if (!s.blocked) return false;
         }
       }
-
-      // Priority
       if (priorityFilter !== "all" && s.priority !== priorityFilter) {
         return false;
       }
-
-      // Price range (any required marketplace price falls inside the range)
       if (minP !== null || maxP !== null) {
         const prices = s.marketplaces
           .filter((m) => m.required === 1 && m.price !== null)
@@ -119,14 +116,9 @@ export default function ProductsView() {
         );
         if (!within) return false;
       }
-
-      // Quantity range
       if (minQ !== null && s.qty < minQ) return false;
       if (maxQ !== null && s.qty > maxQ) return false;
-
-      // Age
       if (ageCutoff !== null && s.recorded_at < ageCutoff) return false;
-
       return true;
     });
 
@@ -156,7 +148,7 @@ export default function ProductsView() {
     platform,
     platformRemainingOnly,
     stageFilter,
-    priorityFilter, // Added dependency
+    priorityFilter,
     minPrice,
     maxPrice,
     minQty,
@@ -164,6 +156,36 @@ export default function ProductsView() {
     age,
     sort,
   ]);
+
+  // Reset to page 1 whenever any filter/sort changes
+  useEffect(() => {
+    setPage(0);
+  }, [
+    search,
+    platform,
+    platformRemainingOnly,
+    stageFilter,
+    priorityFilter,
+    minPrice,
+    maxPrice,
+    minQty,
+    maxQty,
+    age,
+    sort,
+  ]);
+
+  // Pagination derivations
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const safePage = Math.min(page, totalPages - 1);
+  const startIdx = safePage * pageSize;
+  const endIdx = Math.min(startIdx + pageSize, filtered.length);
+  const pageRows = filtered.slice(startIdx, endIdx);
+
+  // Clamp on data shrink (e.g. deletes) — no infinite loop because
+  // the second render sees page === safePage
+  useEffect(() => {
+    if (page !== safePage) setPage(safePage);
+  }, [page, safePage]);
 
   const resetFilters = () => {
     setSearch("");
@@ -354,12 +376,18 @@ export default function ProductsView() {
           <div className="ml-auto flex items-center gap-3">
             <span className="text-xs text-slate-500 dark:text-slate-400">
               {filtered.length} of {stock.length}
+              {filtered.length > 0 && (
+                <>
+                  {" · "}
+                  page {safePage + 1}/{totalPages}
+                </>
+              )}
             </span>
             {hasActiveFilters && (
               <button
                 onClick={resetFilters}
                 className="text-xs font-medium text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-slate-100
-                           px-2 py-1 rounded hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                         px-2 py-1 rounded hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
               >
                 Clear filters
               </button>
@@ -372,8 +400,8 @@ export default function ProductsView() {
                 value={sort}
                 onChange={(e) => setSort(e.target.value as SortKey)}
                 className="text-sm border border-slate-200 dark:border-slate-700 rounded-lg px-2 py-1.5
-                           bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100
-                           focus:outline-none focus:border-slate-900 dark:focus:border-slate-400"
+                         bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100
+                         focus:outline-none focus:border-slate-900 dark:focus:border-slate-400"
               >
                 <option value="newest">Newest first</option>
                 <option value="oldest">Oldest first</option>
@@ -382,7 +410,7 @@ export default function ProductsView() {
                 <option value="qty-asc">Qty low → high</option>
                 <option value="price-desc">Price high → low</option>
                 <option value="price-asc">Price low → high</option>
-              </select>
+              </select>{" "}
             </div>
           </div>
         </div>
@@ -391,30 +419,104 @@ export default function ProductsView() {
       {filtered.length === 0 ? (
         <EmptyState label="No products match these filters." />
       ) : (
-        <div className="bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 overflow-hidden">
-          <table className="w-full text-sm">
-            <thead className="bg-slate-50 dark:bg-slate-800 text-slate-500 dark:text-slate-400 text-xs uppercase tracking-wide">
-              <tr>
-                <th className="text-left px-4 py-2 font-medium">Item</th>
-                <th className="text-left px-4 py-2 font-medium">Batch</th>
-                <th className="text-left px-4 py-2 font-medium">Qty</th>
-                <th className="text-left px-4 py-2 font-medium">Stage</th>
-                <th className="text-left px-4 py-2 font-medium">
-                  Marketplaces
-                </th>
-                <th className="text-right px-4 py-2 font-medium"></th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-              {filtered.map((s) => (
-                <StockRow
-                  key={s.id}
-                  stock={s}
-                  batchName={batchNameById.get(s.batch_id) ?? "—"}
-                />
-              ))}
-            </tbody>
-          </table>
+        // ── Table card — no overflow-hidden on the card so the
+        //    footer can be sticky relative to the viewport ────────
+        <div className="bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800">
+          {/* Table wrapper clips the top rounded corners */}
+          <div className="overflow-hidden rounded-t-lg">
+            <table className="w-full text-sm">
+              <thead className="sticky top-0 z-10 bg-slate-50 dark:bg-slate-800 text-slate-500 dark:text-slate-400 text-xs uppercase tracking-wide">
+                <tr>
+                  <th className="text-left px-4 py-2 font-medium">Item</th>
+                  <th className="text-left px-4 py-2 font-medium">Batch</th>
+                  <th className="text-left px-4 py-2 font-medium">Qty</th>
+                  <th className="text-left px-4 py-2 font-medium">Stage</th>
+                  <th className="text-left px-4 py-2 font-medium">
+                    Marketplaces
+                  </th>
+                  <th className="text-right px-4 py-2 font-medium"></th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                {pageRows.map((s) => (
+                  <StockRow
+                    key={s.id}
+                    stock={s}
+                    batchName={batchNameById.get(s.batch_id) ?? "—"}
+                  />
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Sticky pagination footer — pinned to viewport bottom while
+              the card is on screen, settles at natural position when
+              you scroll past the end of the table */}
+          <div className="sticky bottom-0 z-10 flex flex-wrap items-center justify-between gap-3 rounded-b-lg border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 py-3 text-sm">
+            <div className="text-slate-500 dark:text-slate-400">
+              Showing{" "}
+              <strong className="text-slate-700 dark:text-slate-200">
+                {filtered.length === 0 ? 0 : startIdx + 1} - {endIdx}
+              </strong>{" "}
+              of{" "}
+              <strong className="text-slate-700 dark:text-slate-200">
+                {filtered.length}
+              </strong>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <label className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400">
+                Rows per page
+                <select
+                  value={pageSize}
+                  onChange={(e) => {
+                    setPageSize(Number(e.target.value));
+                    setPage(0);
+                  }}
+                  className="rounded-md border border-slate-200 bg-white px-2 py-1 text-sm
+                             text-slate-900 focus:border-blue-500 focus:outline-none
+                             focus:ring-2 focus:ring-blue-500/40
+                             dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100"
+                >
+                  {PAGE_SIZES.map((n) => (
+                    <option key={n} value={n}>
+                      {n}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => setPage((p) => Math.max(0, p - 1))}
+                  disabled={safePage === 0}
+                  className="inline-flex items-center justify-center w-8 h-8 rounded-md
+                             text-slate-500 hover:text-slate-900 hover:bg-slate-100
+                             disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent
+                             dark:text-slate-400 dark:hover:text-slate-100 dark:hover:bg-slate-800"
+                  aria-label="Previous page"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </button>
+                <span className="min-w-16 text-center text-slate-500 dark:text-slate-400">
+                  {safePage + 1} / {totalPages}
+                </span>
+                <button
+                  onClick={() =>
+                    setPage((p) => Math.min(totalPages - 1, p + 1))
+                  }
+                  disabled={safePage >= totalPages - 1}
+                  className="inline-flex items-center justify-center w-8 h-8 rounded-md
+                             text-slate-500 hover:text-slate-900 hover:bg-slate-100
+                             disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent
+                             dark:text-slate-400 dark:hover:text-slate-100 dark:hover:bg-slate-800"
+                  aria-label="Next page"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>
@@ -429,7 +531,6 @@ function FilterLabel({ children }: { children: React.ReactNode }) {
   );
 }
 
-/** Highest price across required marketplaces; 0 when none. */
 function maxPriceOf(s: Stock): number {
   let max = 0;
   for (const m of s.marketplaces) {

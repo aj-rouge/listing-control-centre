@@ -12,6 +12,7 @@ import {
   type ParsedRow,
 } from "../lib/import/transform";
 import type { ImportRow } from "../lib/import/types";
+import type { PlatformKey } from "../lib/types";
 import { importStockChunk } from "../actions/import";
 
 type Step = "upload" | "map" | "preview" | "importing" | "done";
@@ -27,8 +28,10 @@ function columnLetter(idx: number): string {
   }
   return out;
 }
+type GeneralFieldKey = Exclude<keyof Mapping, "itemSecondary" | PlatformKey>;
+
 const TARGETS: {
-  key: keyof Omit<Mapping, "itemSecondary">;
+  key: GeneralFieldKey;
   label: string;
   required?: boolean;
 }[] = [
@@ -41,7 +44,27 @@ const TARGETS: {
   { key: "pf_number", label: "PF number" },
   { key: "identifier_1", label: "Identifier 1 (IMEI)" },
   { key: "identifier_2", label: "Identifier 2" },
-  { key: "price", label: "Price" },
+  { key: "price", label: "Price (eBay fallback)" },
+];
+
+const PLATFORM_LABELS: Record<PlatformKey, string> = {
+  ebay: "eBay",
+  amazon: "Amazon",
+  onbuy: "OnBuy",
+  tiktok: "TikTok",
+  backmarket: "Backmarket",
+  wowcher: "Wowcher",
+  ebay_live: "eBay Live",
+};
+
+const PLATFORM_TARGETS: { key: PlatformKey; label: string }[] = [
+  { key: "ebay", label: PLATFORM_LABELS.ebay },
+  { key: "amazon", label: PLATFORM_LABELS.amazon },
+  { key: "onbuy", label: PLATFORM_LABELS.onbuy },
+  { key: "tiktok", label: PLATFORM_LABELS.tiktok },
+  { key: "backmarket", label: PLATFORM_LABELS.backmarket },
+  { key: "wowcher", label: PLATFORM_LABELS.wowcher },
+  { key: "ebay_live", label: PLATFORM_LABELS.ebay_live },
 ];
 
 export function ImportWizard({ onClose }: { onClose?: () => void }) {
@@ -53,6 +76,7 @@ export function ImportWizard({ onClose }: { onClose?: () => void }) {
   const [mapping, setMapping] = useState<Mapping>(emptyMapping);
   const [parsed, setParsed] = useState<ParsedRow[]>([]);
   const [parseErrors, setParseErrors] = useState<Record<number, string>>({});
+  const [spacesSkipped, setSpacesSkipped] = useState(0);
   const [batchName, setBatchName] = useState(
     `Import ${new Date().toLocaleDateString()}`,
   );
@@ -76,9 +100,10 @@ export function ImportWizard({ onClose }: { onClose?: () => void }) {
 
   const handleMapNext = useCallback(() => {
     if (mapping.item === null) return;
-    const { rows, errors } = transformRows(rawRows, mapping);
+    const { rows, errors, spacesSkipped } = transformRows(rawRows, mapping);
     setParsed(rows);
     setParseErrors(errors);
+    setSpacesSkipped(spacesSkipped.length);
     setStep("preview");
   }, [rawRows, mapping]);
 
@@ -144,6 +169,7 @@ export function ImportWizard({ onClose }: { onClose?: () => void }) {
     setMapping(emptyMapping());
     setParsed([]);
     setParseErrors({});
+    setSpacesSkipped(0);
     setResult(null);
     setProgress({ done: 0, total: 0 });
   }, []);
@@ -173,6 +199,7 @@ export function ImportWizard({ onClose }: { onClose?: () => void }) {
         <PreviewStep
           rows={parsed}
           errors={parseErrors}
+          spacesSkipped={spacesSkipped}
           batchName={batchName}
           setBatchName={setBatchName}
           onBack={() => setStep("map")}
@@ -611,7 +638,6 @@ function MapStep({
             </p>
           </div>
         ))}
-
         <div className="md:col-span-2">
           <label className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300">
             Item — combine with{" "}
@@ -631,6 +657,35 @@ function MapStep({
             e.g. pick &quot;Model&quot; above and &quot;Make&quot; here →
             &quot;Apple iPhone 16 Pro 256GB Gold&quot;
           </p>
+        </div>{" "}
+        <div className="mt-2 border-t border-slate-200 pt-4 md:col-span-2 dark:border-slate-800">
+          <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
+            <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-200">
+              Platform prices
+            </h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              Leave a cell empty, <code className="font-mono">-</code>,{" "}
+              <code className="font-mono">N/A</code> or non‑numeric to skip that
+              platform for a row.
+            </p>
+          </div>
+          <div className="grid grid-cols-1 gap-x-6 gap-y-4 md:grid-cols-2">
+            {PLATFORM_TARGETS.map((t) => (
+              <div key={t.key}>
+                <label className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300">
+                  {t.label}
+                </label>
+                <Dropdown
+                  value={mapping[t.key]}
+                  onChange={(v) => set(t.key, v)}
+                  options={columnOptions}
+                />
+                <p className="mt-1 min-h-4 truncate text-xs text-slate-400 dark:text-slate-500">
+                  {previewFor(mapping[t.key], sampleRows)}
+                </p>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
 
@@ -669,6 +724,7 @@ const CELL_INPUT_CLASS =
 function PreviewStep({
   rows,
   errors,
+  spacesSkipped,
   batchName,
   setBatchName,
   onBack,
@@ -678,6 +734,7 @@ function PreviewStep({
 }: {
   rows: ParsedRow[];
   errors: Record<number, string>;
+  spacesSkipped: number;
   batchName: string;
   setBatchName: (v: string) => void;
   onBack: () => void;
@@ -686,6 +743,7 @@ function PreviewStep({
   onRemoveRow: (idx: number) => void;
 }) {
   const errorCount = Object.keys(errors).length;
+  const platformsMapped = rows.some((r) => r.platformPrices !== undefined);
   return (
     <div className="rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
       <div className="mb-4 flex flex-wrap items-center gap-4">
@@ -704,6 +762,11 @@ function PreviewStep({
         </label>
         <span className="text-sm text-slate-600 dark:text-slate-400">
           {rows.length} row{rows.length !== 1 && "s"} ready
+          {spacesSkipped > 0 && (
+            <span className="ml-2 text-slate-500 dark:text-slate-500">
+              · {spacesSkipped} blank row{spacesSkipped !== 1 && "s"} skipped
+            </span>
+          )}
           {errorCount > 0 && (
             <span className="ml-2 text-red-600 dark:text-red-400">
               · {errorCount} skipped
@@ -741,6 +804,9 @@ function PreviewStep({
               <th className="px-3 py-2 font-semibold">Location</th>
               <th className="px-3 py-2 font-semibold">Condition</th>
               <th className="w-24 px-3 py-2 font-semibold">Price</th>
+              {platformsMapped && (
+                <th className="px-3 py-2 font-semibold">Platforms</th>
+              )}
               <th className="px-3 py-2 font-semibold">Notes</th>
               <th className="px-3 py-2"></th>
             </tr>
@@ -803,15 +869,42 @@ function PreviewStep({
                     type="number"
                     step="0.01"
                     value={r.price ?? ""}
-                    onChange={(e) =>
-                      onUpdateRow(i, {
-                        price:
-                          e.target.value === "" ? null : Number(e.target.value),
-                      })
-                    }
+                    onChange={(e) => {
+                      const v =
+                        e.target.value === "" ? null : Number(e.target.value);
+                      const patch: Partial<ImportRow> = { price: v };
+                      if (r.platformPrices !== undefined) {
+                        const pp = { ...r.platformPrices };
+                        if (v === null) delete pp.ebay;
+                        else pp.ebay = v;
+                        patch.platformPrices = pp;
+                      }
+                      onUpdateRow(i, patch);
+                    }}
                     className={CELL_INPUT_CLASS}
                   />
                 </td>
+                {platformsMapped && (
+                  <td className="px-3 py-2 align-top">
+                    {r.platformPrices &&
+                    Object.keys(r.platformPrices).length > 0 ? (
+                      <div className="flex flex-wrap gap-1">
+                        {Object.entries(r.platformPrices).map(([p, v]) => (
+                          <span
+                            key={p}
+                            className="rounded bg-blue-50 px-1.5 py-0.5 text-[11px]
+                                       text-blue-700 dark:bg-blue-900/30 dark:text-blue-300"
+                          >
+                            {PLATFORM_LABELS[p as PlatformKey]}: £
+                            {Number(v).toFixed(2)}
+                          </span>
+                        ))}
+                      </div>
+                    ) : (
+                      <span className="text-slate-400">—</span>
+                    )}
+                  </td>
+                )}
                 <td className="px-3 py-2">
                   <input
                     value={r.notes ?? ""}

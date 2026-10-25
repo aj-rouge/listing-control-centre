@@ -56,15 +56,37 @@ export async function importStockChunk(input: {
   for (let i = 0; i < input.rows.length; i++) {
     const r = input.rows[i];
     try {
-      const marketplaces: Marketplace[] = PLATFORMS.map((platform) => ({
-        platform,
-        price: platform === "ebay" ? (r.price ?? null) : null,
-        required: platform === "ebay" ? 1 : 0,
-        status: platform === "ebay" ? "not_started" : "not_required",
-        blocked_reason: null,
-        published_at: null,
-        listing_id: null,
-      }));
+      const usePlatforms = r.platformPrices !== undefined;
+
+      const marketplaces: Marketplace[] = PLATFORMS.map((platform) => {
+        if (usePlatforms) {
+          const price = r.platformPrices![platform];
+          const isRequired = price !== undefined && price !== null;
+          const required: 0 | 1 = isRequired ? 1 : 0;
+          return {
+            platform,
+            price: isRequired ? (price as number) : null,
+            required,
+            status: isRequired ? "not_started" : "not_required",
+            blocked_reason: null,
+            published_at: null,
+            listing_id: null,
+          } as Marketplace;
+        }
+
+        // Backward-compat: eBay is required, everything else is not.
+        const isEbay = platform === "ebay";
+        const required: 0 | 1 = isEbay ? 1 : 0;
+        return {
+          platform,
+          price: isEbay ? (r.price ?? null) : null,
+          required,
+          status: isEbay ? "not_started" : "not_required",
+          blocked_reason: null,
+          published_at: null,
+          listing_id: null,
+        } as Marketplace;
+      });
 
       const stock: Stock = {
         id: crypto.randomUUID(),
